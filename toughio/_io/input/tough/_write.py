@@ -377,7 +377,7 @@ def write_buffer(
     if "COORD" in blocks and parameters["coordinates"]:
         out += _write_coord(parameters, space_between_values)
 
-    if "CONNE" in blocks and parameters["connections"]:
+    if "CONNE" in blocks and (parameters["connections"] or parameters["elements"]):
         out += _write_conne(parameters, space_between_values)
 
     if "INCON" in blocks and parameters["initial_conditions"]:
@@ -1425,6 +1425,10 @@ def _write_coord(parameters, space_between_values):
 def _write_conne(parameters, space_between_values):
     """Write CONNE block data."""
     from ._common import connections
+
+    # Return empty connection (i.e., single element)
+    if "connections" not in parameters or not parameters["connections"]:
+        return []
 
     # Format
     label_length = len(max(parameters["connections"], key=len)) // 2
