@@ -2,16 +2,11 @@ import struct
 import time
 
 import numpy as np
+from meshio import Mesh
 
+from .._helpers import get_material_key
 from ...__about__ import __version__ as version
 from ..._common import open_file
-from ...core import Mesh
-from .._helpers import get_material_key
-
-__all__ = [
-    "read",
-    "write",
-]
 
 
 meshio_only = {

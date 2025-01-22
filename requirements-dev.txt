@@ -1,8 +1,5 @@
-black
 build
-docformatter
 invoke
-isort
 pytest
 pytest-cov
-twine
+ruff

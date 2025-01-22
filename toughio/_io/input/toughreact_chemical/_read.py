@@ -1,6 +1,5 @@
 from ...._common import open_file
-from ...._exceptions import ReadError
-from ...._helpers import FileIterator
+from ....core import FileIterator, ReadError
 from ..._common import to_float
 from .._common import read_end_comments
 

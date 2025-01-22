@@ -5,8 +5,6 @@ import tarfile
 
 from invoke import task
 
-import toughio
-
 
 @task
 def build(c):
@@ -21,6 +19,8 @@ def html(c):
 
 @task
 def tag(c):
+    import toughio
+    
     c.run(f"git tag v{toughio.__version__}")
     c.run("git push --tags")
 
@@ -52,25 +52,9 @@ def clean(c, bytecode=False):
 
 
 @task
-def black(c):
-    c.run("black -t py38 toughio")
-    c.run("black -t py38 tests")
-
-
-@task
-def docstring(c):
-    c.run("docformatter -r -i --blank --wrap-summaries 88 --wrap-descriptions 88 --pre-summary-newline toughio")
-
-
-@task
-def isort(c):
-    c.run("isort toughio")
-    c.run("isort tests")
-
-
-@task
-def format(c):
-    c.run("invoke isort black docstring")
+def ruff(c):
+    c.run("ruff check --fix pvgridder")
+    c.run("ruff format --target-version py38 --line-length 88 pvgridder")
 
 
 @task
@@ -90,3 +74,18 @@ def tar(c):
         tf.add("toughio", arcname="toughio/toughio", filter=filter)
         tf.add("pyproject.toml", arcname="toughio/pyproject.toml")
         tf.add("setup.cfg", arcname="toughio/setup.cfg")
+
+
+@task
+def test(c, cov=False, html=False):
+    command = ["python -m pytest"]
+
+    if cov:
+        command += ["--cov", "toughio", "--cov-report", "term"]
+
+        if html:
+            command += ["--cov-report", "html"]
+
+    command += ["tests"]
+
+    c.run(" ".join(command))

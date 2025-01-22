@@ -1,3 +1,128 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "toughio"
+dynamic = ["version"]
+description = "Pre- and post-processing Python library for TOUGH"
+readme = {file = "README.rst", content-type = "text/x-rst"}
+requires-python = ">=3.8"
+license = {text = "BSD 3-Clause License"}
+authors = [
+    {name = "Keurfon Luu", email = "keurfonluu@lbl.gov"}
+]
+keywords = [
+    "io",
+    "numerical modeling",
+    "t2well",
+    "t4well",
+    "tough2",
+    "tough3",
+    "tough4",
+]
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Natural Language :: English",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "h5py",
+    "matplotlib",
+    "meshio >= 5.2, < 6.0",
+    "numpy >= 1.13.0",
+    "pandas",
+    "pyvista >= 0.36",
+    "psutil >= 5.0",
+    "scipy >= 0.9",
+]
+
+[project.urls]
+Homepage = "https://github.com/keurfonluu/toughio"
+Code = "https://github.com/keurfonluu/toughio"
+Issues = "https://github.com/keurfonluu/toughio/issues"
+
+[project.entry-points.console_scripts]
+toughio-co2tab = "toughio._cli:co2tab"
+toughio-export = "toughio._cli:export"
+toughio-extract = "toughio._cli:extract"
+toughio-merge = "toughio._cli:merge"
+toughio-save2incon = "toughio._cli:save2incon"
+
+[tool.setuptools.packages.find]
+include = ["toughio*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "toughio.__about__.__version__"}
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+exclude = [
+    "toughio/__about__.py"
+]
+
+[tool.ruff.lint]
+select = [
+    # docformatter, see <https://github.com/astral-sh/ruff/issues/1335>
+    "D104",
+    "D106",
+    "D200",
+    "D204",
+    "D206",
+    "D207",
+    "D208",
+    "D209",
+    "D210",
+    "D211",
+    "D213",
+    "D214",
+    "D215",
+    "D300",
+    "D301",
+    "D400",
+    "D403",
+    "D404",
+    "D405",
+    "D406",
+    "D407",
+    "D408",
+    "D409",
+    "D410",
+    "D411",
+    "D412",
+    "D413",
+    "D414",
+    "D415",
+    "D418",
+    "D419",
+    # isort
+    "I",
+]
+
+[tool.ruff.lint.isort]
+force-wrap-aliases = true
+combine-as-imports = true
+from-first = false
+lines-after-imports = 2
+relative-imports-order = "closest-to-furthest"
+
+[tool.coverage.report]
+exclude_also = [
+    "def __repr__",
+    "except ModuleNotFoundError",
+    "raise ModuleNotFoundError",
+    "raise NotImplementedError",
+    "raise TypeError",
+    "raise ValueError",
+    "@(abc\\.)?abstractmethod",
+]

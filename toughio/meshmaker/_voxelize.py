@@ -1,10 +1,6 @@
 import numpy as np
 
-from ._structured_grid import structured_grid
-
-__all__ = [
-    "voxelize",
-]
+from ._meshmaker import structured_grid
 
 
 def voxelize(points, origin, layer=False, material="dfalt"):

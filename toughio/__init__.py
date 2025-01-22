@@ -1,64 +1,11 @@
-from . import _cli, capillarity, meshmaker, relative_permeability, utils
+from . import _cli, meshmaker, utils
 from .__about__ import __version__
-from ._helpers import convert_labels
-from ._io import (
-    read_input,
-    read_output,
-    read_table,
-    register_input,
-    register_output,
-    register_table,
-    write_input,
-    write_output,
-)
-from ._mesh import from_meshio, from_pyvista
-from ._mesh import read as read_mesh
-from ._mesh import read_time_series
-from ._mesh import register as register_mesh
-from ._mesh import write as write_mesh
-from ._mesh import write_time_series
+from ._io import *
 from ._run import run
-from .core import (
-    Mesh,
-    CellBlock,
-    H5File,
-    HistoryOutput,
-    ConnectionOutput,
-    ElementOutput,
-    Output,
-    ParticleTracker,
-)
+from .core import *
+from .legacy import *
 
-__all__ = [
-    "Mesh",
-    "CellBlock",
-    "H5File",
-    "HistoryOutput",
-    "ConnectionOutput",
-    "ElementOutput",
-    "Output",
-    "ParticleTracker",
-    "meshmaker",
-    "register_input",
-    "register_output",
-    "register_mesh",
-    "register_table",
-    "read_input",
-    "read_output",
-    "read_table",
-    "write_input",
-    "write_output",
-    "from_meshio",
-    "from_pyvista",
-    "read_mesh",
-    "write_mesh",
-    "read_time_series",
-    "write_time_series",
-    "relative_permeability",
-    "capillarity",
-    "utils",
-    "convert_labels",
-    "run",
-    "_cli",
+__all__ = [x for x in dir() if not x.startswith("_")]
+__all__ += [
     "__version__",
 ]

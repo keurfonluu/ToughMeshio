@@ -2,7 +2,6 @@ import numpy as np
 
 from .._io.output import read as read_output
 from .._io.output import write as write_output
-from .._mesh import read as read_mesh
 
 __all__ = [
     "extract",
@@ -18,6 +17,8 @@ format_to_ext = {
 
 def extract(argv=None):
     import os
+
+    from .. import read_mesh
 
     parser = _get_parser()
     args = parser.parse_args(argv)
