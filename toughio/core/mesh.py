@@ -204,11 +204,16 @@ class BaseMesh(ABC):
 
         # Shallow copy current mesh
         mesh = self.copy(deep=False)
+
         labels = mesh.labels
         materials = mesh.materials
         dirichlet = mesh.dirichlet
         volumes = np.where(dirichlet, 1.0e50, mesh.volumes)
         centers = mesh.centers
+
+        # Labels of inactive elements
+        inactive = ~mesh.active
+        inactive_labels = set(labels[inactive])
 
         # Connection data
         connections, face_centers, face_normals, face_areas = mesh._compute_connection_properties()
@@ -253,6 +258,7 @@ class BaseMesh(ABC):
                     "center": center,
                 }
                 for label, material, volume, center in zip(labels, materials, volumes, centers)
+                if label not in inactive_labels
             },
             "connections": {
                 f"{l1}{l2}": {
@@ -404,12 +410,12 @@ class BaseMesh(ABC):
 
     def _compute_connection_properties(self) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
         poly = (
-            pvg.extract_cell_geometry(self.pyvista)
+            pvg.extract_cell_geometry(self.pyvista, remove_empty_cells=True)
             .compute_cell_sizes(length=True, area=True, volume=False)
         )
         mask = (poly["vtkOriginalCellIds"] >= 0).all(axis=1)
         connections = poly["vtkOriginalCellIds"][mask]
-        centers = poly.cell_centers().points[mask]
+        centers = poly.cell_centers(vertex=False).points[mask]
 
         if self.ndim == 3:
             normals = poly.compute_normals(point_normals=False)["Normals"][mask]
@@ -435,8 +441,23 @@ class BaseMesh(ABC):
         return self.data[name]
 
     @property
+    def active(self) -> ArrayLike:
+        try:
+            return self.data["vtkGhostType"] == 0
+
+        except KeyError:
+            return np.ones(self.n_cells, dtype=bool)
+
+    @property
     def centers(self) -> ArrayLike:
-        return self.pyvista.cell_centers().points
+        if self.active.all():
+            mesh = self.pyvista
+
+        else:
+            mesh = self.pyvista.copy(deep=False)
+            mesh.clear_data()
+
+        return mesh.cell_centers(vertex=False).points
 
     @property
     def data(self) -> dict:
@@ -462,7 +483,7 @@ class BaseMesh(ABC):
 
     @property
     def labels(self) -> ArrayLike:
-        from string import ascii_uppercase
+        from . import Labeler
 
         if self._labels is not None:
             labels = self._labels
@@ -472,18 +493,7 @@ class BaseMesh(ABC):
                 bins = 3185000 * 10 ** np.arange(5, dtype=np.int64) + 1
                 self.label_length = np.digitize(self.n_cells, bins) + 5
 
-            n = self.label_length - 3
-            fmt = f"{{: >{n}}}"
-            alpha = np.array(list(ascii_uppercase))
-            numer = np.array([fmt.format(i) for i in range(10 ** n)])
-            nomen = np.concatenate(([f"{i + 1:1}" for i in range(9)], alpha))
-
-            q1, r1 = np.divmod(np.arange(self.n_cells), numer.size)
-            q2, r2 = np.divmod(q1, nomen.size)
-            q3, r3 = np.divmod(q2, nomen.size)
-            _, r4 = np.divmod(q3, nomen.size)
-
-            labels = np.array(["".join(name) for name in zip(alpha[r4], nomen[r3], nomen[r2], numer[r1])])
+            labels = Labeler(self.label_length)(self.n_cells)
 
         return labels
 
