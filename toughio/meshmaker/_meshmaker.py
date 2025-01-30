@@ -12,6 +12,7 @@ def structured_grid(
     dz: Optional[ArrayLike] = None,
     origin: Optional[ArrayLike] = None,
     layer: bool = False,
+    bottom_up: bool = False,
     material: str = "dfalt",
 ):
     """
@@ -51,9 +52,12 @@ def structured_grid(
     if (dx < 0.0).any() or (dy < 0.0).any() or (dz < 0.0).any():
         raise ValueError("could not initialize structured grid with negative grid spacings")
 
-    x = np.insert(dx.cumsum(), 0, 0.0)
-    y = np.insert(dy.cumsum(), 0, 0.0)
-    z = np.insert(dz.cumsum(), 0, 0.0)
+    if not bottom_up:
+        dz = dz[::-1]
+
+    x = np.insert(dx.cumsum(), 0, 0.0) if dx.sum() > 0.0 else [0.0]
+    y = np.insert(dy.cumsum(), 0, 0.0) if dy.sum() > 0.0 else [0.0]
+    z = np.insert(dz.cumsum(), 0, 0.0) if dz.sum() > 0.0 else [0.0]
     X, Y, Z = np.meshgrid(x, y, z, indexing="ij")
 
     if not layer:
@@ -84,9 +88,10 @@ def structured_grid(
         zaxis = 2
 
     # Reorder cells from top to bottom
-    X = np.flip(X, axis=zaxis)
-    Y = np.flip(Y, axis=zaxis)
-    Z = np.flip(Z, axis=zaxis)
+    if not bottom_up:
+        X = np.flip(X, axis=zaxis)
+        Y = np.flip(Y, axis=zaxis)
+        Z = np.flip(Z, axis=zaxis)
 
     grid = pv.StructuredGrid(X, Y, Z).translate(origin)
     grid = grid if origin is not None else grid
@@ -101,6 +106,7 @@ def cylindric_grid(
     dz: ArrayLike,
     origin_z: Optional[float] = None,
     layer: bool = False,
+    bottom_up: bool = False,
     material: str = "dfalt",
 ):
     """
@@ -129,7 +135,7 @@ def cylindric_grid(
 
     dr = np.asarray(dr)
     dz = np.asarray(dz)
-    origin_z = origin_z if origin_z is not None else 0.0
+    origin_z = origin_z if origin_z is not None else -dz.sum()
 
     if dr.ndim != 1 or dz.ndim != 1:
         raise ValueError("could not initialize cylindric grid with non 1D arrays")
@@ -143,6 +149,7 @@ def cylindric_grid(
         dz,
         origin=(0.0, 0.0, origin_z),
         layer=layer,
+        bottom_up=bottom_up,
         material=material,
     )
 
