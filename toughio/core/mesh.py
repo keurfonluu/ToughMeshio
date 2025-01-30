@@ -114,6 +114,18 @@ class BaseMesh(ABC):
 
     add_cell_data = add_data
 
+    def add_material(self, material: str, imat: Optional[int] = None) -> None:
+        if imat is None:
+            imat = len(self.metadata["Material"])
+
+        else:
+            to_pop = [k for k, v in self.metadata["Material"].items() if v == imat]
+
+            for k in to_pop:
+                self.metadata["Material"].pop(k, None)
+
+        self.metadata["Material"][material] = imat
+
     def find_enclosing_cell(self, points: ArrayLike) -> ArrayLike:
         """
         Find cell(s) that contains query point(s).
