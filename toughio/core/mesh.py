@@ -610,7 +610,16 @@ class Mesh(BaseMesh):
         super().__init__(*args, material=material, metadata=metadata)
 
     def __getitem__(self, key: tuple[int | slice | ArrayLike]) -> Mesh:
-        return Mesh(self.pyvista.cast_to_unstructured_grid().extract_cells(key))
+        if isinstance(key, int):
+            return self.pyvista.get_cell(key)
+
+        else:
+            mesh = Mesh(self.pyvista.cast_to_unstructured_grid().extract_cells(key))
+            mesh.labels = self.labels[key]
+            mesh.label_length = self.label_length
+            mesh.metadata.update(self.metadata)
+
+            return mesh
 
     def extrude_to_3d(self, height: ArrayLike = 1.0, axis: int = 2) -> Mesh:
         from ..legacy import extrude_to_3d
