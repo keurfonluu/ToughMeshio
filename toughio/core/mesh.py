@@ -126,6 +126,28 @@ class BaseMesh(ABC):
 
         self.metadata["Material"][material] = imat
 
+    def extract_cells_by_material(self, material: int | str | Sequence[int | str], invert: bool = False) -> Mesh:
+        material = [material] if isinstance(material, (int, str)) else material
+
+        try:
+            material_map = dict(self.metadata["Material"])
+            material = np.unique([mat if isinstance(mat, int) else material_map[mat] for mat in material])
+
+        except KeyError as e:
+            raise ValueError(f"invalid material {e}")
+
+        mask = np.zeros(self.n_cells, dtype=bool)
+
+        for mat in material:
+            mask[self.materials_digitized == mat] = True
+
+        mask = ~mask if invert else mask
+
+        if not mask.any():
+            raise ValueError("could not extract cells with no matching material")
+
+        return self[mask]
+
     def find_enclosing_cell(self, points: ArrayLike) -> ArrayLike:
         """
         Find cell(s) that contains query point(s).
