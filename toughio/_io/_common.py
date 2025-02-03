@@ -59,6 +59,8 @@ def to_float(s):
 
 def to_str(x, fmt, space_between_values=False):
     """Convert variable to string."""
+    from .. import scientific_notation
+
     x = "" if x is None else x
 
     if not isinstance(x, str):
@@ -85,31 +87,3 @@ def to_str(x, fmt, space_between_values=False):
 
     else:
         return fmt.replace("g", "").replace("f", "").format(x)
-
-
-def scientific_notation(x, n):
-    """
-    Scientific notation with fixed number of characters.
-
-    Note
-    ----
-    This function maximizes accuracy given a fixed number of characters.
-
-    """
-    tmp = np.format_float_scientific(
-        x,
-        unique=True,
-        trim="0",
-        exp_digits=0,
-        sign=False,
-    )
-    tmp = tmp.replace("+", "")
-
-    if len(tmp) > n:
-        significand, exponent = tmp.split("e")
-        significand = significand[: n - len(tmp)]
-
-        return f"{significand}e{exponent}"
-
-    else:
-        return tmp
