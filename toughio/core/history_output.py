@@ -446,7 +446,7 @@ class HistoryOutput(UserDict):
 
     @property
     def size(self) -> int:
-        """Set data dimension."""
+        """Return data size."""
         return (
             len(self[list(self.keys())[0]])
             if self.ndim == 1
@@ -464,5 +464,5 @@ class HistoryOutput(UserDict):
 
     @property
     def units(self) -> dict:
-        """Set time data."""
+        """Return data units."""
         return self._units
