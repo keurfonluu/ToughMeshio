@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import Sequence
 from numpy.typing import ArrayLike
 from typing import Literal, Optional
 
@@ -135,20 +136,20 @@ class HistoryOutput(UserDict):
             for key, value in super().items():
                 yield key, value
 
-    def concatenate(self, obj: HistoryOutput | list[HistoryOutput], shift: bool = False) -> HistoryOutput:
+    def concatenate(self, obj: HistoryOutput | Sequence[HistoryOutput], shift: bool = False) -> HistoryOutput:
         """
         Concatenate history outputs.
 
         Parameters
         ----------
-        obj : :class:`toughio.HistoryOutput` | sequence of :class:`toughio.HistoryOutput`
+        obj : toughio.HistoryOutput | Sequence[toughio.HistoryOutput]
             History output(s) to concatenate this output with.
         shift : bool, default False
             If True, shift times of *obj* by the last time value of this output.
         
         Returns
         -------
-        :class:`toughio.HistoryOutput`
+        toughio.HistoryOutput
             Concatenated history output.
 
         """
@@ -219,7 +220,7 @@ class HistoryOutput(UserDict):
             Data key for Y axis.
         x : str, optional
             Data key for X axis. Use time data by default.
-        ax : :class:`matplotlib.axes.Axes`, optional
+        ax : matplotlib.axes.Axes, optional
             Plot axes.
         logx : bool, default False
             If True, use log scaling on X axis.
@@ -297,6 +298,11 @@ class HistoryOutput(UserDict):
         inplace : bool, optional
             If True, update history output in-place.
 
+        Returns
+        -------
+        toughio.HistoryOutput
+            Shifted history output. Only provided if *inplace* is False.
+
         """
         obj = self if inplace else copy.deepcopy(self)
 
@@ -321,7 +327,7 @@ class HistoryOutput(UserDict):
 
         Returns
         -------
-        :class:`pandas.DataFrame` | :class:`pandas.Series`
+        pandas.DataFrame | pandas.Series
             Converted dataframe or series.
 
         """

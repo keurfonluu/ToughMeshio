@@ -5,8 +5,22 @@ from typing_extensions import Self
 
 
 class FileIterator:
+    """
+    File iterator helper class.
+
+    Parameters
+    ----------
+    f : TextIO
+        File handle.
+    count : int, default 0
+        Line count.
+
+    """
+    __name__: str = "FileIterator"
+    __qualname__: str = "toughio.FileIterator"
+
     def __init__(self, f: TextIO, count: int = 0) -> None:
-        """File iterator helper class."""
+        """Initialize a file iterator."""
         self.f = f
         self.count = count
         self.fiter = iter(f.readline, "")

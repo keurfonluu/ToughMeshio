@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import Sequence
 from numpy.typing import ArrayLike
 from typing import Optional
 
@@ -18,7 +19,7 @@ class Output(ABC):
         Data arrays.
     time : scalar, optional
         Time step (in seconds).
-    labels : sequence of str, optional
+    labels : ArrayLike, optional
         Labels of elements.
 
     """
@@ -39,13 +40,13 @@ class Output(ABC):
     @abstractmethod
     def __getitem__(self, islice: tuple) -> None:
         """Slice an output."""
-        raise NotImplementedError()
+        pass
 
     @abstractmethod
     def index(self, label: str, *args, **kwargs) -> None:
         """Get index of element or connection."""
         if self.labels is None:
-            raise AttributeError()
+            raise AttributeError("could not find labels")
 
     @property
     def n_data(self) -> int:
@@ -100,7 +101,7 @@ class ElementOutput(Output):
         Data arrays.
     time : scalar, optional
         Time step (in seconds).
-    labels : sequence of str, optional
+    labels : ArrayLike, optional
         Labels of elements.
 
     """
@@ -118,19 +119,19 @@ class ElementOutput(Output):
 
     def __getitem__(
         self,
-        islice: int | str | slice | list[int] | list[str],
+        islice: int | str | slice | Sequence[int | str],
     ) -> dict | ElementOutput:
         """
         Slice an element output.
 
         Parameters
         ----------
-        islice : int | str | slice | sequence of int | sequence of str
+        islice : int | str | slice | Sequence[int | str]
             Indices or labels of elements to slice.
 
         Returns
         -------
-        dict | :class:`toughio.ElementOutput`
+        dict | toughio.ElementOutput
             Sliced element outputs.
 
         """
@@ -188,7 +189,7 @@ class ConnectionOutput(Output):
         Data arrays.
     time : scalar, optional
         Time step (in seconds).
-    labels : sequence of str, optional
+    labels : ArrayLike, optional
         Labels of connections.
 
     """
@@ -206,19 +207,19 @@ class ConnectionOutput(Output):
 
     def __getitem__(
         self,
-        islice: int | str | slice | list[int] | list[str],
+        islice: int | str | slice | Sequence[int | str],
     ) -> dict | ConnectionOutput:
         """
         Slice a connection output.
 
         Parameters
         ----------
-        islice : int | str | slice | sequence of int | sequence of str
+        islice : int | str | slice | Sequence[int | str]
             Indices or labels of connections to slice.
 
         Returns
         -------
-        dict | :class:`toughio.ConnectionOutput`
+        dict | toughio.ConnectionOutput
             Sliced connection outputs.
 
         """
@@ -275,8 +276,8 @@ class ConnectionOutput(Output):
     def to_element(
         self,
         mesh,
-        linear_data: Optional[list[str]] = None,
-        ignore_elements: Optional[list[str]] = None,
+        linear_data: Optional[Sequence[str]] = None,
+        ignore_elements: Optional[Sequence[str]] = None,
     ) -> ElementOutput:
         """
         Project connection data to element centers.
@@ -285,14 +286,14 @@ class ConnectionOutput(Output):
         ----------
         mesh : dict | PathLike
             Mesh parameters or file name.
-        linear_data : sequence of str, optional
+        linear_data : Sequence[str], optional
             Data keys corresponding to linear quantities. Linear quantities (e.g., Darcy's velocity) are not scaled by the interface area.
-        ignore_elements : sequence of str, optional
+        ignore_elements : Sequence[str], optional
             Labels of elements to ignore.
 
         Returns
         -------
-        :class:`toughio.ElementOutput`
+        toughio.ElementOutput
             Element output with projected data.
 
         References

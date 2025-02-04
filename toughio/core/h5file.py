@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import Sequence
 from numpy.typing import ArrayLike
 from typing import Literal, Optional
 from types import TracebackType
@@ -21,9 +22,9 @@ class H5File:
     ----------
     filename : str | PathLike
         H5 container file name.
-    mode : {'r', 'w'}, optional, default 'r'
+    mode : {'r', 'w'}, default 'r'
         File opening mode.
-    compression_opts : int, optional, default 4
+    compression_opts : int, default 4
         Compression level for gzip compression. May be an integer from 0 to 9.
     exist_ok : bool, default False
         If True and *mode* = 'w', overwrite *filename* if it already exists.
@@ -35,14 +36,12 @@ class H5File:
     def __init__(
         self,
         filename: str | os.PathLike,
-        mode: Optional[Literal["r", "w"]] = None,
-        compression_opts: Optional[int] = None,
+        mode: Literal["r", "w"] = "r",
+        compression_opts: int = 4,
         exist_ok: bool = False,
     ) -> None:
         """Initialize an H5 file."""
         self.filename = filename
-        self.mode = mode if mode else "r"
-        self.compression_opts = compression_opts if compression_opts else 4
         self.exist_ok = exist_ok
 
     def __enter__(self) -> H5File:
@@ -83,7 +82,7 @@ class H5File:
 
         Parameters
         ----------
-        obj : :class:`toughio.ConnectionOutput` | :class:`toughio.ElementOutput` | :class:`toughio.HistoryOutput`
+        obj : toughio.ConnectionOutput | toughio.ElementOutput | toughio.HistoryOutput
             Output to dump to container.
 
         """
@@ -197,7 +196,7 @@ class H5File:
 
         Returns
         -------
-        :class:`toughio.ConnectionOutput`
+        toughio.ConnectionOutput
             Connection output.
 
         """
@@ -217,7 +216,7 @@ class H5File:
 
         Returns
         -------
-        :class:`toughio.ElementOutput`
+        toughio.ElementOutput
             Element output.
 
         """
@@ -237,7 +236,7 @@ class H5File:
 
         Returns
         -------
-        :class:`toughio.HistoryOutput`
+        toughio.HistoryOutput
             Connection history output.
 
         """
@@ -257,7 +256,7 @@ class H5File:
 
         Returns
         -------
-        :class:`toughio.HistoryOutput`
+        toughio.HistoryOutput
             Element history output.
 
         """
@@ -277,7 +276,7 @@ class H5File:
 
         Returns
         -------
-        :class:`toughio.HistoryOutput`
+        toughio.HistoryOutput
             Generator history output.
 
         """
@@ -297,79 +296,79 @@ class H5File:
 
         Returns
         -------
-        :class:`toughio.HistoryOutput`
+        toughio.HistoryOutput
             Rock history output.
 
         """
         return self._load_history("rock", name_or_ind)
 
-    def list_connection_output(self) -> list[str]:
+    def list_connection_output(self) -> Sequence[str]:
         """
         List connection output names in container.
 
         Returns
         -------
-        sequence of str
+        Sequence[str]
             List of connection output names.
 
         """
         return self._list("Output/Connection")
 
-    def list_element_output(self) -> list[str]:
+    def list_element_output(self) -> Sequence[str]:
         """
         List element output names in container.
 
         Returns
         -------
-        sequence of str
+        Sequence[str]
             List of element output names.
 
         """
         return self._list("Output/Element")
 
-    def list_connection_history(self) -> list[str]:
+    def list_connection_history(self) -> Sequence[str]:
         """
         List connection history output names in container.
 
         Returns
         -------
-        sequence of str
+        Sequence[str]
             List of connection history output names.
 
         """
         return self._list("History/Connection")
 
-    def list_element_history(self) -> list[str]:
+    def list_element_history(self) -> Sequence[str]:
         """
         List element history output names in container.
 
         Returns
         -------
-        sequence of str
+        Sequence[str]
             List of element history output names.
 
         """
         return self._list("History/Element")
 
-    def list_generator_history(self) -> list[str]:
+    def list_generator_history(self) -> Sequence[str]:
         """
         List generator history output names in container.
 
         Returns
         -------
-        sequence of str
+        Sequence[str]
             List of generator history output names.
 
         """
         return self._list("History/Generator")
 
-    def list_rock_history(self) -> list[str]:
+    def list_rock_history(self) -> Sequence[str]:
         """
         List rock history output names in container.
 
         Returns
         -------
-        sequence of str
+        Sequence[str]
             List of rock history output names.
 
         """
@@ -426,7 +425,7 @@ class H5File:
 
         return HistoryOutput(data, metadata=metadata)
 
-    def _list(self, name: str) -> list[str]:
+    def _list(self, name: str) -> Sequence[str]:
         """List output names."""
         node = self._get_node(name)
         node = node if node else {}

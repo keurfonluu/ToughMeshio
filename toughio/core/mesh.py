@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import Sequence
 from numpy.typing import ArrayLike
 from typing import Literal, Optional
 from typing_extensions import Self
@@ -12,8 +13,11 @@ import numpy as np
 import pyvista as pv
 import pvgridder as pvg
 
+from ._typing import GridLike
+
 
 class BaseMesh(ABC):
+    """Base class for mesh."""
     __name__: str = "BaseMesh"
     __qualname__: str = "toughio.BaseMesh"
 
@@ -23,6 +27,7 @@ class BaseMesh(ABC):
         material: Optional[str] = None,
         metadata: Optional[dict] = None,
     ) -> None:
+        """Initialize a mesh."""
         if len(args) == 1:
             mesh, = args
 
@@ -99,9 +104,24 @@ class BaseMesh(ABC):
 
     @abstractmethod
     def __getitem__(self, key: tuple[int | slice | ArrayLike]) -> None:
+        """Slice a mesh."""
         pass
 
-    def copy(self, deep=True) -> Self:
+    def copy(self, deep: bool = True) -> Self:
+        """
+        Return a copy of the mesh.
+
+        Parameters
+        ----------
+        deep : bool, default True
+            If True, return a deep copy.
+
+        Returns
+        -------
+        toughio.Mesh
+            Copy of the mesh.
+
+        """
         mesh = self.__class__(self.pyvista.copy(deep=deep))
         mesh._labels = self._labels
         mesh.label_length = self.label_length
@@ -110,11 +130,33 @@ class BaseMesh(ABC):
         return mesh
 
     def add_data(self, name: str, data: ArrayLike) -> None:
+        """
+        Add a new data array.
+
+        Parameters
+        ----------
+        name : str
+            Name of data array.
+        data : ArrayLike
+            Data array.
+
+        """
         self.data[name] = data[:self.n_cells]
 
     add_cell_data = add_data
 
     def add_material(self, material: str, imat: Optional[int] = None) -> None:
+        """
+        Add a new material.
+
+        Parameters
+        ----------
+        material : str
+            Material name.
+        imat : int, optional
+            Material ID. Older materials with the same ID will be removed.
+        
+        """
         if imat is None:
             imat = len(self.metadata["Material"])
 
@@ -127,6 +169,22 @@ class BaseMesh(ABC):
         self.metadata["Material"][material] = imat
 
     def extract_cells_by_material(self, material: int | str | Sequence[int | str], invert: bool = False) -> Mesh:
+        """
+        Extract cells with given material names or IDS.
+
+        Parameters
+        ----------
+        material : int | str | Sequence[int | str]
+            List of material names or IDs to extract.
+        invert : bool, default False
+            If True, invert selection.
+        
+        Returns
+        -------
+        toughio.Mesh
+            Mesh with extracted materials.
+
+        """
         material = [material] if isinstance(material, (int, str)) else material
 
         try:
@@ -185,9 +243,31 @@ class BaseMesh(ABC):
     near = find_nearest_cell
 
     def rename_data(self, old: str, new: str) -> None:
+        """
+        Rename an existing data array.
+
+        Parameters
+        ----------
+        old : str
+            Name of data array to rename.
+        new : str
+            Name to rename the data array to.
+        
+        """
         self.pyvista.rename_array(old, new, preference="cell")
 
-    def set_material(self, material: str, ind: Optional[ArrayLike] = None):
+    def set_material(self, material: str, ind: Optional[ArrayLike] = None) -> None:
+        """
+        Set material to cells.
+
+        Parameters
+        ----------
+        material : str
+            Material name.
+        ind : ArrayLike, optional
+            Indices of cells for which material will be assigned to.
+    
+        """
         ind = ind if ind is not None else np.ones(self.n_cells, dtype=bool)
 
         if "Material" not in self.metadata:
@@ -203,9 +283,27 @@ class BaseMesh(ABC):
         self.materials_digitized[ind] = imat
 
     def to_meshio(self) -> meshio.Mesh:
+        """
+        Convert mesh to a meshio mesh.
+
+        Returns
+        -------
+        meshio.Mesh
+            Output mesh.
+
+        """
         return pv.to_meshio(self.pyvista)
 
     def to_pyvista(self) -> pv.StructuredGrid | pv.UnstructuredGrid:
+        """
+        Convert mesh to a PyVista mesh.
+
+        Returns
+        -------
+        pyvista.StructuredGrid | pyvista.UnstructuredGrid
+            Output mesh.
+
+        """
         return self.pyvista.copy(deep=True)
 
     def to_tough(
@@ -217,6 +315,36 @@ class BaseMesh(ABC):
         incon: bool = False,
         **kwargs
     ) -> dict | None:
+        """
+        Convert mesh to TOUGH mesh.
+
+        Parameters
+        ----------
+        filename : str | os.PathLike, optional
+            Output file name.
+        nodal_distance : {'line', 'orthogonal'}, default 'line'
+            Method to calculate connection nodal distances:
+
+             - 'line': distance between node and common face along connecting line
+             (distance is not normal),
+             - 'orthogonal': distance between node and its orthogonal projection onto
+             common face (shortest distance).
+
+        material_name : dict, optional
+            Map of material names.
+        gravity : ArrayLike, optional
+            Gravity direction vector.
+        incon : bool, default False
+            If True, also export initial conditions.
+        **kwargs : dict, optional
+            Additional keyword arguments. See ``toughio.write_input`` for more details.
+
+        Returns
+        -------
+        dict
+            TOUGH mesh as a dict. Only provided if *filename* is None.
+
+        """
         def dot(A: ArrayLike, B: ArrayLike) -> ArrayLike:
             """Calculate the dot product when arrays A and B have the same shape."""
             return (A * B).sum(axis=1)
@@ -361,9 +489,22 @@ class BaseMesh(ABC):
     def to_xdmf(
         self,
         filename: str | os.PathLike,
-        other_data: Optional[list[dict]] = None,
+        other_data: Optional[Sequence[dict]] = None,
         time_steps: Optional[ArrayLike] = None,
     ) -> None:
+        """
+        Convert mesh to XDMF file.
+
+        Parameters
+        ----------
+        filename : str | os.PathLike
+            Output file name.
+        other_data : Sequence[dict], optional
+            List of additional data to export.
+        time_steps : ArrayLike, optional
+            List of time steps.
+
+        """
         import shutil
 
         filename = pathlib.Path(filename)
@@ -421,6 +562,31 @@ class BaseMesh(ABC):
         incon: bool = False,
         **kwargs
     ) -> None:
+        """
+        Write mesh to TOUGH MESH file.
+
+        Parameters
+        ----------
+        filename : str | os.PathLike, default 'MESH'
+            Output file name.
+        nodal_distance : {'line', 'orthogonal'}, default 'line'
+            Method to calculate connection nodal distances:
+
+             - 'line': distance between node and common face along connecting line
+             (distance is not normal),
+             - 'orthogonal': distance between node and its orthogonal projection onto
+             common face (shortest distance).
+
+        material_name : dict, optional
+            Map of material names.
+        gravity : ArrayLike, optional
+            Gravity direction vector.
+        incon : bool, default False
+            If True, also export initial conditions to INCON file.
+        **kwargs : dict, optional
+            Additional keyword arguments. See ``toughio.write_input`` for more details.
+
+        """
         self.to_tough(
             filename,
             nodal_distance,
@@ -430,6 +596,17 @@ class BaseMesh(ABC):
         )
 
     def write(self, filename: str | os.PathLike, file_format: Optional[str] = None) -> None:
+        """
+        Write mesh to file.
+
+        Parameters
+        ----------
+        filename : str | os.PathLike
+            Output file name.
+        file_format : str, optional
+            Output file format.
+
+        """
         if file_format:
             self.to_meshio().write(filename, file_format=file_format)
 
@@ -437,12 +614,22 @@ class BaseMesh(ABC):
             self.pyvista.save(filename)
 
     def plot(self, **kwargs) -> None:
+        """
+        Plot a mesh.
+
+        Parameters
+        ----------
+        **kwargs : dict, optional
+            Additional keyword arguments. See ``pyvista.DataSet.plot`` for more details.
+
+        """
         if "scalars" not in kwargs:
             kwargs["scalars"] = self.materials
             
         self.pyvista.plot(**kwargs)
 
     def _compute_connection_properties(self) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
+        """Compute connection properties."""
         poly = (
             pvg.extract_cell_geometry(self.pyvista, remove_empty_cells=True)
             .compute_cell_sizes(length=True, area=True, volume=False)
@@ -468,6 +655,7 @@ class BaseMesh(ABC):
         return connections, centers, normals, lengths_or_areas
 
     def _get_property(self, name: str, default: Optional[ArrayLike] = None) -> ArrayLike:
+        """Get property data."""
         if name not in self.data:
             data = np.zeros(self.n_cells, dtype=float) if default is None else default
             self.add_data(name, data)
@@ -476,6 +664,7 @@ class BaseMesh(ABC):
 
     @property
     def active(self) -> ArrayLike:
+        """Return active cell array."""
         try:
             return self.data["vtkGhostType"] == 0
 
@@ -484,6 +673,7 @@ class BaseMesh(ABC):
 
     @property
     def centers(self) -> ArrayLike:
+        """Return cell center array."""
         if self.active.all():
             mesh = self.pyvista
 
@@ -495,28 +685,34 @@ class BaseMesh(ABC):
 
     @property
     def data(self) -> dict:
+        """Return mesh data."""
         return self.pyvista.cell_data
 
     cell_data = data
 
     @property
     def dirichlet(self) -> ArrayLike:
+        """Return Dirichlet cell array."""
         return self._get_property("Dirichlet", np.zeros(self.n_cells, dtype=bool))
 
     @dirichlet.setter
     def dirichlet(self, value: ArrayLike) -> None:
+        """Set Dirichlet cell array."""
         self.add("Dirichlet", np.asanyarray(value).astype(bool))
 
     @property
     def initial_conditions(self) -> ArrayLike:
+        """Return initial conditions array."""
         return self._get_property("Initial Conditions")
 
     @initial_conditions.setter
     def initial_conditions(self, value: ArrayLike) -> None:
+        """Set initial conditions array."""
         self.add_data("Initial Conditions", np.asanyarray(value).astype(float))
 
     @property
     def labels(self) -> ArrayLike:
+        """Return cell labels."""
         from . import Labeler
 
         if self._labels is not None:
@@ -533,6 +729,7 @@ class BaseMesh(ABC):
 
     @labels.setter
     def labels(self, value: ArrayLike) -> None:
+        """Set cell labels."""
         value = np.array(value)
 
         if value.ndim != 1 or value.size != self.n_cells:
@@ -542,14 +739,17 @@ class BaseMesh(ABC):
 
     @property
     def label_length(self) -> int:
+        """Return label length."""
         return self._label_length
 
     @label_length.setter
     def label_length(self, value: int) -> None:
+        """Set label length."""
         self._label_length = value
 
     @property
     def materials(self) -> ArrayLike:
+        """Return cell materials. Always return a copy."""
         metadata = self.metadata
 
         try:
@@ -569,62 +769,77 @@ class BaseMesh(ABC):
 
     @property
     def materials_digitized(self) -> ArrayLike:
+        """Return cell material IDs."""
         return self._get_property("Material", -np.ones(self.n_cells, dtype=int))
 
     @materials_digitized.setter
     def materials_digitized(self, value: ArrayLike) -> None:
+        """Set cell material IDs."""
         self.add_data("Material", np.asanyarray(value).astype(int))
 
     @property
     def metadata(self) -> dict:
+        """Return mesh metadata."""
         return self.pyvista.user_dict
 
     @property
     def ndim(self) -> int:
+        """Return mesh dimension."""
         return pvg.get_dimension(self.pyvista)
 
     @property
     def n_cells(self) -> int:
+        """Return number of cells."""
         return self.pyvista.n_cells
 
     @property
     def n_points(self) -> int:
+        """Return number of points."""
         return self.pyvista.n_points
 
     @property
     def permeabilities(self) -> ArrayLike:
+        """Return cell permeability array."""
         return self._get_property("Permeability")
 
     @permeabilities.setter
     def permeabilities(self, value: ArrayLike) -> None:
+        """Set cell permeability array."""
         self.add_data("Permeability", np.asanyarray(value).astype(float))
 
     @property
     def phase_compositions(self) -> ArrayLike:
+        """Return phase composition array."""
         return self._get_property("Phase Composition", np.zeros(self.n_cells, dtype=int))
 
     @phase_compositions.setter
     def phase_compositions(self, value: ArrayLike) -> None:
+        """Set phase composition array."""
         self.add_data("Phase Composition", np.asanyarray(value).astype(int))
 
     @property
     def points(self) -> ArrayLike:
+        """Return points array."""
         return self.pyvista.points
 
     @property
     def porosities(self) -> ArrayLike:
+        """Return cell porosity array."""
         return self._get_property("Porosity")
 
     @porosities.setter
     def porosities(self, value: ArrayLike) -> None:
+        """Set cell porosity array."""
         self.add_data("Porosity", np.asanyarray(value).astype(float))
 
     @property
     def pyvista(self) -> pv.StructuredGrid | pv.UnstructuredGrid:
+        """Return underlying PyVista mesh."""
         return self._pyvista
 
     @property
     def volumes(self) -> ArrayLike:
+        """Return cell volume array."""
         is3d = self.ndim == 3
         key = "Volume" if is3d else "Area"
 
@@ -632,6 +847,24 @@ class BaseMesh(ABC):
 
 
 class Mesh(BaseMesh):
+    """
+    Mesh class.
+    
+    Parameters
+    ----------
+    args : str | os.PathLike | GridLike | meshio.Mesh | toughio.Mesh | ArrayLike
+        Initialize a new mesh instance:
+
+         - From a file
+         - From a toughio, meshio or PyVista mesh
+         - From two points and cells arrays
+
+    material : str, optional
+        Cell data key to use to initialize material data.
+    metadata : dict, optional
+        Mesh metadata.
+
+    """
     __name__: str = "Mesh"
     __qualname__: str = "toughio.Mesh"
 
@@ -641,9 +874,11 @@ class Mesh(BaseMesh):
         material: Optional[str] = None,
         metadata: Optional[dict] = None,
     ) -> None:
+        """Initialize a mesh."""
         super().__init__(*args, material=material, metadata=metadata)
 
     def __getitem__(self, key: tuple[int | slice | ArrayLike]) -> Mesh:
+        """Slice a mesh."""
         if isinstance(key, int):
             return self.pyvista.get_cell(key)
 
@@ -656,11 +891,36 @@ class Mesh(BaseMesh):
             return mesh
 
     def extrude_to_3d(self, height: ArrayLike = 1.0, axis: int = 2) -> Mesh:
+        """
+        Convert a 2D mesh to 3D by extruding cells along given axis.
+
+        Parameters
+        ----------
+        height : ArrayLike, default 1.0
+            Height of extrusion.
+        axis : int, default 2
+            Axis along which extrusion is performed.
+
+        Returns
+        -------
+        toughio.Mesh
+            Extruded mesh. Only provided if *inplace* is False.
+
+        """
         from ..legacy import extrude_to_3d
 
         return Mesh(extrude_to_3d(self.pyvista))
 
     def prune_duplicates(self) -> Mesh:
+        """
+        Delete duplicate points.
+
+        Returns
+        -------
+        toughio.Mesh
+            Mesh with duplicate points removed.
+
+        """
         return Mesh(self.pyvista.clean(produce_merge_map=False))
 
 
@@ -674,6 +934,25 @@ class CylindricMesh(BaseMesh):
         material: Optional[str] = None,
         metadata: Optional[dict] = None,
     ) -> None:
+        """
+        Cylindric mesh class.
+        
+        Parameters
+        ----------
+        args : str | os.PathLike | GridLike | toughio.Mesh
+            Initialize a new mesh instance:
+
+             - From a file
+             - From a toughio or PyVista mesh
+
+            Mesh should represent a 2D vertical rectilinear grid.
+
+        material : str, optional
+            Cell data key to use to initialize material data.
+        metadata : dict, optional
+            Mesh metadata.
+
+        """
         super().__init__(*args, material=material, metadata=metadata)
 
         if self.ndim != 2:
@@ -694,10 +973,12 @@ class CylindricMesh(BaseMesh):
         self.points[:, 0] -= x[0]
         self.points[:, 1] = 0.0
 
-    def __getitem__(self, key: tuple[int | slice | ArrayLike]) -> CylindricMesh:
-        raise NotImplementedError("could not slice cylindric mesh")
+    def __getitem__(self, key: tuple[int | slice | ArrayLike]) -> None:
+        """Raise an error if trying to slice a cylindric mesh."""
+        raise ValueError("could not slice cylindric mesh")
 
     def _compute_connection_properties(self) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
+        """Compute connection properties."""
         connections, centers, normals, lengths = super()._compute_connection_properties()
 
         # This is counterintuitive but the areas can be calculated with the same
@@ -716,6 +997,7 @@ class CylindricMesh(BaseMesh):
 
     @property
     def volumes(self) -> ArrayLike:
+        """Return cell volume array."""
         centers = self.centers
         x = np.unique(self.points[:, 0])
         z = np.unique(self.points[:, 2])

@@ -7,10 +7,37 @@ import numpy as np
 
 
 class Labeler:
+    """
+    Labeler class.
+
+    Parameters
+    ----------
+    label_length : int
+        Number of characters.
+
+    """
+    __name__: str = "Labeler"
+    __qualname__: str = "toughio.Labeler"
+
     def __init__(self, label_length: int) -> None:
+        """Initialize a labeler."""
         self.label_length = label_length
 
     def __call__(self, n: int) -> ArrayLike:
+        """
+        Generate *n* labels.
+
+        Parameters
+        ----------
+        n : int:
+            Number of labels to generate.
+
+        Returns
+        -------
+        ArrayLike
+            List of *n* labels.
+    
+        """
         l = self.label_length - 3
         fmt = f"{{: >{l}}}"
         alpha = np.array(list(ascii_uppercase))
@@ -26,8 +53,10 @@ class Labeler:
 
     @property
     def label_length(self) -> int:
+        """Return label length."""
         return self._label_length
 
     @label_length.setter
     def label_length(self, value: int) -> None:
+        """Set label length."""
         self._label_length = value

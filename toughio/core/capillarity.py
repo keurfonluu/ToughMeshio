@@ -1,109 +1,103 @@
 from __future__ import annotations
+from numpy.typing import ArrayLike
+from typing import Optional
 
 from abc import ABC, abstractmethod, abstractproperty
 
 import numpy as np
+from matplotlib.axes import Axes
 
 
 class BaseCapillarity(ABC):
+    """Base class for capillarity model."""
     _id = None
     _name = ""
 
     def __init__(self, *args) -> None:
-        """
-        Base class for capillarity models.
-
-        Do not use.
-
-        """
+        """Initialize a capillarity model."""
         pass
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Display capillarity model informations."""
         out = [f"{self._name} capillarity model (ICP = {self._id}):"]
         out += [
             f"    CP({i + 1}) = {parameter}"
             for i, parameter in enumerate(self.parameters)
         ]
+
         return "\n".join(out)
 
-    def __call__(self, sl):
+    def __call__(self, sl: ArrayLike) -> ArrayLike:
         """Calculate capillary pressure given liquid saturation."""
         if np.ndim(sl) == 0:
             if not (0.0 <= sl <= 1.0):
                 raise ValueError()
+
             return self._eval(sl, *self.parameters)
         else:
             sl = np.asarray(sl)
+
             if not np.logical_and((sl >= 0.0).all(), (sl <= 1.0).all()):
                 raise ValueError()
+
             return np.array([self._eval(sat, *self.parameters) for sat in sl])
 
     @abstractmethod
-    def _eval(self, sl, *args):
-        raise NotImplementedError()
+    def _eval(self, sl: ArrayLike, *args) -> None:
+        pass
 
-    def plot(self, n=100, ax=None, figsize=(10, 8), plt_kws=None):
+    def plot(
+        self,
+        n: int = 100,
+        ax: Optional[Axes] = None,
+        figsize: tuple[int, int] = (10, 8),
+        plt_kws: Optional[dict] = None,
+    ) -> Axes:
         """
         Plot capillary pressure curve.
 
         Parameters
         ----------
-        n : int, optional, default 100
+        n : int, default 100
             Number of saturation points.
-        ax : matplotlib.pyplot.Axes or None, optional, default None
-            Matplotlib axes. If `None`, a new figure and axe is created.
-        figsize : array_like or None, optional, default None
-            New figure size if `ax` is `None`.
-        plt_kws : dict or None, optional, default None
+        ax : matplotlib.axes.Axes, optional
+            Matplotlib axes. If None, a new figure and axe is created.
+        figsize : tuple, default (10, 8)
+            New figure size if *ax* is None.
+        plt_kws : dict, optional
             Additional keywords passed to :func:`matplotlib.pyplot.semilogy`.
 
+        Returns
+        -------
+        matplotlib.axes.Axes
+            Plot axes.
+
         """
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError:
-            raise ImportError(
-                "Plotting capillary pressure curve requires matplotlib to be installed."
-            )
-
-        if not (isinstance(n, int) and n > 1):
-            raise ValueError()
-        if not (ax is None or isinstance(ax, plt.Axes)):
-            raise TypeError()
-        if not (figsize is None or isinstance(figsize, (tuple, list, np.ndarray))):
-            raise TypeError()
-        if len(figsize) != 2:
-            raise ValueError()
-        if not (plt_kws is None or isinstance(plt_kws, dict)):
-            raise TypeError()
-
         # Plot parameters
         plt_kws = plt_kws if plt_kws is not None else {}
         _kwargs = {"linestyle": "-", "linewidth": 2}
         _kwargs.update(plt_kws)
 
         # Initialize figure
-        if ax:
-            ax1 = ax
-        else:
-            figsize = figsize if figsize else (8, 5)
+        if ax is None:
             fig = plt.figure(figsize=figsize, facecolor="white")
-            ax1 = fig.add_subplot(1, 1, 1)
+            ax = fig.add_subplot(1, 1, 1)
 
         # Calculate capillary pressure
         sl = np.linspace(0.0, 1.0, n)
         pcap = self(sl)
 
         # Plot
-        ax1.semilogy(sl, np.abs(pcap), **_kwargs)
-        ax1.set_xlim(0.0, 1.0)
-        ax1.set_xlabel("Saturation (liquid)")
-        ax1.set_ylabel("Capillary pressure (Pa)")
-        ax1.grid(True, linestyle=":")
+        ax.semilogy(sl, np.abs(pcap), **_kwargs)
+        ax.set_xlim(0.0, 1.0)
+        ax.set_xlabel("Saturation (liquid)")
+        ax.set_ylabel("Capillary pressure (Pa)")
+        ax.grid(True, linestyle=":")
 
         plt.draw()
         plt.show()
-        return ax1
+
+        return ax
 
     @property
     def id(self):
@@ -116,12 +110,12 @@ class BaseCapillarity(ABC):
         return self._name
 
     @abstractproperty
-    def parameters(self):
-        raise NotImplementedError()
+    def parameters(self) -> None:
+        pass
 
     @parameters.setter
-    def parameters(self, value):
-        raise NotImplementedError()
+    def parameters(self, value: ArrayLike) -> None:
+        pass
 
 
 class Linear(BaseCapillarity):

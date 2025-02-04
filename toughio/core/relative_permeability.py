@@ -1,21 +1,20 @@
 from __future__ import annotations
+from numpy.typing import ArrayLike
+from typing import Optional
 
 from abc import ABC, abstractmethod, abstractproperty
 
 import numpy as np
+from matplotlib.axes import Axes
 
 
 class BaseRelativePermeability(ABC):
+    """Base class for relative permeability model."""
     _id = None
     _name = ""
 
     def __init__(self, *args) -> None:
-        """
-        Base class for relative permeability models.
-
-        Do not use.
-
-        """
+        """Initialize a relative permeability model."""
         pass
 
     def __repr__(self):
@@ -25,18 +24,23 @@ class BaseRelativePermeability(ABC):
             f"    RP({i + 1}) = {parameter}"
             for i, parameter in enumerate(self.parameters)
         ]
+
         return "\n".join(out)
 
-    def __call__(self, sl):
+    def __call__(self, sl: ArrayLike) -> ArrayLike:
         """Calculate relative permeability given liquid saturation."""
         if np.ndim(sl) == 0:
             if not (0.0 <= sl <= 1.0):
                 raise ValueError()
+
             return self._eval(sl, *self.parameters)
+
         else:
             sl = np.asarray(sl)
+
             if not np.logical_and((sl >= 0.0).all(), (sl <= 1.0).all()):
                 raise ValueError()
+                
             return np.transpose([self._eval(sat, *self.parameters) for sat in sl])
 
     @abstractmethod

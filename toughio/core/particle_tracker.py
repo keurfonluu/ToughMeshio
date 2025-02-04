@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import Sequence
 from numpy.typing import ArrayLike
 from typing import Literal, Optional
 
@@ -15,7 +16,7 @@ class ParticleTracker:
     
     Parameters
     ----------
-    mesh : :class:`toughio.Mesh` | :class:`meshio.Mesh` | :class:`pyvista.UnstructuredGrid`
+    mesh : toughio.Mesh | meshio.Mesh | pyvista.UnstructuredGrid
         Input mesh.
     velocity : str | ArrayLike
         Velocity field data.
@@ -57,17 +58,17 @@ class ParticleTracker:
     def track(
         self,
         particles: ArrayLike,
-        direction: Optional[Literal["forward", "backward"]] = "forward",
-        step_size: Optional[float] = None,
-        time_ini: Optional[float] = None,
-        max_step: Optional[int] = None,
-        max_time: Optional[float] = None,
-        max_length: Optional[float] = None,
+        direction: Literal["forward", "backward"] = "forward",
+        step_size: float = 1.0,
+        time_ini: float = 0.0,
+        max_step: int = 10000,
+        max_time: float = np.inf,
+        max_length: float = np.inf,
         end_points: Optional[ArrayLike] = None,
-        radius: Optional[float] = None,
-        window_length: Optional[int] = None,
+        radius: float = 1.0,
+        window_length: int = 32,
         check_bounds: bool = False,
-    ) -> ArrayLike | list[ArrayLike]:
+    ) -> ArrayLike | Sequence[ArrayLike]:
         """
         Track particle(s) given starting point coordinates.
 
@@ -75,30 +76,32 @@ class ParticleTracker:
         ----------
         particles : ArrayLike
             Starting point coordinates of particle(s) to track.
-        direction : {'forward', 'backward'}, optional, default 'forward'
+        direction : {'forward', 'backward'}, default 'forward'
             Direction of integration.
-        step_size : scalar, optional, default 1.0
+        step_size : scalar, default 1.0
             Pathline step size at each time step (in m).
-        time_ini : scalar, optional, default 0.0
+        time_ini : scalar, default 0.0
             Initial time step (in second).
-        max_step : int, optional, default 10000
+        max_step : int, default 10000
             Maximum number of steps.
-        max_time : scalar, optional, default np.inf
+        max_time : scalar, default Infinity
             Maximum time of pathline ending point.
-        max_length : scalar, optional, default np.inf
+        max_length : scalar, default Infinity
             Maximum length of pathline.
         end_points : ArrayLike, optional
             Ending point coordinates.
-        radius : scalar, optional, default 1.0
-            Ending point radius (in m). The tracking algorithm stops if the pathline is within *radius* meters of an ending point.
-        window_length : int, optional, default 32
+        radius : scalar, default 1.0
+            Ending point radius (in m). The tracking algorithm stops if the pathline is
+            within *radius* meters of an ending point.
+        window_length : int, default 32
             Window length for oscillation detection.
         check_bounds : bool, default False
-            If True, a particle is out of bound if it is not contained by any cell of the mesh, otherwise a simple box condition is applied (faster but less accurate).
+            If True, a particle is out of bound if it is not contained by any cell of
+            the mesh, otherwise a simple box condition is applied (faster but less accurate).
 
         Returns
         -------
-        ArrayLike | list[ArrayLike]
+        ArrayLike | Sequence[ArrayLike]
             Output pathline(s).
 
         """
