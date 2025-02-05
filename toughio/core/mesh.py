@@ -99,8 +99,8 @@ class BaseMesh(ABC):
         if metadata is not None:
             self.metadata.update(metadata)
 
-        self._labels = None
-        self.label_length = None
+        if self.label_length is None:
+            self.set_label_length()
 
     @abstractmethod
     def __getitem__(self, key: tuple[int | slice | ArrayLike]) -> None:
@@ -123,8 +123,6 @@ class BaseMesh(ABC):
 
         """
         mesh = self.__class__(self.pyvista.copy(deep=deep))
-        mesh._labels = self._labels
-        mesh.label_length = self.label_length
         mesh.metadata.update(self.metadata)
 
         return mesh
@@ -255,6 +253,25 @@ class BaseMesh(ABC):
         
         """
         self.pyvista.rename_array(old, new, preference="cell")
+
+    def set_label_length(self, n: Optional[int] = None) -> None:
+        """
+        Set label length and regenerate cell label array.
+
+        Parameters
+        ----------
+        n : int, optional
+            Label length.
+
+        """
+        from . import Labeler
+
+        if not n:
+            bins = 3185000 * 10 ** np.arange(5, dtype=np.int64) + 1
+            n = np.digitize(self.n_cells, bins) + 5
+
+        self.labels = Labeler(n)(self.n_cells)
+        self.metadata["Label Length"] = int(n)
 
     def set_material(self, material: str, ind: Optional[ArrayLike] = None) -> None:
         """
@@ -713,39 +730,27 @@ class BaseMesh(ABC):
     @property
     def labels(self) -> ArrayLike:
         """Return cell labels."""
-        from . import Labeler
-
-        if self._labels is not None:
-            labels = self._labels
-
-        else:
-            if not self.label_length:
-                bins = 3185000 * 10 ** np.arange(5, dtype=np.int64) + 1
-                self.label_length = np.digitize(self.n_cells, bins) + 5
-
-            labels = Labeler(self.label_length)(self.n_cells)
-
-        return labels
+        return self._get_property("Labels")
 
     @labels.setter
     def labels(self, value: ArrayLike) -> None:
         """Set cell labels."""
-        value = np.array(value)
-
-        if value.ndim != 1 or value.size != self.n_cells:
-            raise ValueError(f"could not set label arrays of shape {value.shape} (expected shape ({self.n_cells},))")
-
-        self._labels = value
+        self.add_data("Labels", value)
+        self.metadata["Label Length"] = len(max(self.labels, key=len))
 
     @property
-    def label_length(self) -> int:
+    def label_length(self) -> int | None:
         """Return label length."""
-        return self._label_length
+        try:
+            return self.metadata["Label Length"]
+
+        except KeyError:
+            return None
 
     @label_length.setter
-    def label_length(self, value: int) -> None:
+    def label_length(self, value: int | None) -> None:
         """Set label length."""
-        self._label_length = value
+        self.set_label_length(value)
 
     @property
     def materials(self) -> ArrayLike:
@@ -884,8 +889,6 @@ class Mesh(BaseMesh):
 
         else:
             mesh = Mesh(self.pyvista.cast_to_unstructured_grid().extract_cells(key))
-            mesh.labels = self.labels[key]
-            mesh.label_length = self.label_length
             mesh.metadata.update(self.metadata)
 
             return mesh
