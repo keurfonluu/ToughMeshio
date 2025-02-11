@@ -24,7 +24,6 @@ class BaseMesh(ABC):
     def __init__(
         self,
         *args,
-        material: Optional[str] = None,
         metadata: Optional[dict] = None,
     ) -> None:
         """Initialize a mesh."""
@@ -78,26 +77,21 @@ class BaseMesh(ABC):
         if isinstance(self.pyvista, pv.UnstructuredGrid):
             self._pyvista = pvg.extract_cells_by_dimension(self.pyvista)
 
-        if not material:
-            for k, v in self.data.items():
-                if v.dtype.kind == "i":
-                    material = k
-                    break
-
-        if material:
-            if self.data[material].dtype.kind != "i":
-                raise ValueError("could not set material to non-integer data")
-
-            self.rename_data(material, "Material")
-
-            try:
-                self.metadata["Material"] = self.metadata.pop(material)
-
-            except KeyError:
-                pass
-
         if metadata is not None:
             self.metadata.update(metadata)
+
+        try:
+            material_key = self.material_key
+
+        except KeyError:
+            material_key = None
+
+            for k, v in self.data.items():
+                if v.dtype.kind == "i":
+                    material_key = k
+                    break
+
+        self.material_key = material_key if material_key else "Material"
 
         if self.label_length is None:
             self.set_label_length()
@@ -155,16 +149,18 @@ class BaseMesh(ABC):
             Material ID. Older materials with the same ID will be removed.
         
         """
+        material_key = self.material_key
+        
         if imat is None:
-            imat = len(self.metadata["Material"])
+            imat = len(self.metadata[material_key])
 
         else:
-            to_pop = [k for k, v in self.metadata["Material"].items() if v == imat]
+            to_pop = [k for k, v in self.metadata[material_key].items() if v == imat]
 
             for k in to_pop:
-                self.metadata["Material"].pop(k, None)
+                self.metadata[material_key].pop(k, None)
 
-        self.metadata["Material"][material] = imat
+        self.metadata[material_key][material] = imat
 
     def extract_cells_by_material(self, material: int | str | Sequence[int | str], invert: bool = False) -> Mesh:
         """
@@ -186,7 +182,7 @@ class BaseMesh(ABC):
         material = [material] if isinstance(material, (int, str)) else material
 
         try:
-            material_map = dict(self.metadata["Material"])
+            material_map = dict(self.metadata[self.material_key])
             material = np.unique([mat if isinstance(mat, int) else material_map[mat] for mat in material])
 
         except KeyError as e:
@@ -286,16 +282,17 @@ class BaseMesh(ABC):
     
         """
         ind = ind if ind is not None else np.ones(self.n_cells, dtype=bool)
+        material_key = self.material_key
 
-        if "Material" not in self.metadata:
-            self.metadata["Material"] = {material: 0}
+        if material_key not in self.metadata:
+            self.metadata[material_key] = {material: 0}
         
         try:
-            imat = self.metadata["Material"][material]
+            imat = self.metadata[material_key][material]
         
         except KeyError:
-            imat = len(self.metadata["Material"])
-            self.metadata["Material"][material] = imat
+            imat = len(self.metadata[material_key])
+            self.metadata[material_key][material] = imat
 
         self.materials_digitized[ind] = imat
 
@@ -753,12 +750,29 @@ class BaseMesh(ABC):
         self.set_label_length(value)
 
     @property
+    def material_key(self) -> str:
+        """Return data key used for materials."""
+        return self.metadata["Material Key"]
+
+    @material_key.setter
+    def material_key(self, value: str) -> None:
+        """Set data key used for materials."""
+        try:
+            if self.data[value].dtype.kind != "i":
+                raise ValueError("could not set material to non-integer data")
+
+        except KeyError:
+            pass
+        
+        self.metadata["Material Key"] = value
+
+    @property
     def materials(self) -> ArrayLike:
         """Return cell materials. Always return a copy."""
         metadata = self.metadata
 
         try:
-            material_map = {v: k for k, v in metadata["Material"].items()}
+            material_map = {v: k for k, v in metadata[self.material_key].items()}
 
             return np.array(
                 [
@@ -775,12 +789,12 @@ class BaseMesh(ABC):
     @property
     def materials_digitized(self) -> ArrayLike:
         """Return cell material IDs."""
-        return self._get_property("Material", -np.ones(self.n_cells, dtype=int))
+        return self._get_property(self.material_key, -np.ones(self.n_cells, dtype=int))
 
     @materials_digitized.setter
     def materials_digitized(self, value: ArrayLike) -> None:
         """Set cell material IDs."""
-        self.add_data("Material", np.asanyarray(value).astype(int))
+        self.add_data(self.material_key, np.asanyarray(value).astype(int))
 
     @property
     def metadata(self) -> dict:
@@ -876,11 +890,10 @@ class Mesh(BaseMesh):
     def __init__(
         self,
         *args,
-        material: Optional[str] = None,
         metadata: Optional[dict] = None,
     ) -> None:
         """Initialize a mesh."""
-        super().__init__(*args, material=material, metadata=metadata)
+        super().__init__(*args, metadata=metadata)
 
     def __getitem__(self, key: tuple[int | slice | ArrayLike]) -> Mesh:
         """Slice a mesh."""
@@ -934,7 +947,6 @@ class CylindricMesh(BaseMesh):
     def __init__(
         self,
         *args,
-        material: Optional[str] = None,
         metadata: Optional[dict] = None,
     ) -> None:
         """
@@ -956,7 +968,7 @@ class CylindricMesh(BaseMesh):
             Mesh metadata.
 
         """
-        super().__init__(*args, material=material, metadata=metadata)
+        super().__init__(*args, metadata=metadata)
 
         if self.ndim != 2:
             raise ValueError("could not initialize a cylindric mesh from a 3D mesh")
