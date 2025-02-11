@@ -498,7 +498,7 @@ class BaseMesh(ABC):
             write_input(filename, parameters, block="mesh", **kwargs)
 
             if incon:
-                write_input("INCON", parameters, block="incon", **kwargs)
+                write_input(pathlib.Path(filename).parent / "INCON", parameters, block="incon", **kwargs)
 
         else:
             return parameters
