@@ -42,6 +42,8 @@ class H5File:
     ) -> None:
         """Initialize an H5 file."""
         self.filename = filename
+        self.mode = mode
+        self.compression_opts = compression_opts
         self.exist_ok = exist_ok
 
     def __enter__(self) -> H5File:
