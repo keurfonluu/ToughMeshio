@@ -77,6 +77,10 @@ class BaseMesh(ABC):
         if isinstance(self.pyvista, pv.UnstructuredGrid):
             self._pyvista = pvg.extract_cells_by_dimension(self.pyvista)
 
+        # Cache user_dict in metadata for performance
+        # Update user_dict with metadata when saving mesh
+        self._metadata = dict(self.pyvista.user_dict)
+
         if metadata is not None:
             self.metadata.update(metadata)
 
@@ -87,6 +91,9 @@ class BaseMesh(ABC):
             material_key = None
 
             for k, v in self.data.items():
+                if k.lower().startswith("vtk"):
+                    continue
+
                 if v.dtype.kind == "i":
                     material_key = k
                     break
@@ -182,7 +189,7 @@ class BaseMesh(ABC):
         material = [material] if isinstance(material, (int, str)) else material
 
         try:
-            material_map = dict(self.metadata[self.material_key])
+            material_map = self.metadata[self.material_key]
             material = np.unique([mat if isinstance(mat, int) else material_map[mat] for mat in material])
 
         except KeyError as e:
@@ -250,6 +257,23 @@ class BaseMesh(ABC):
         """
         self.pyvista.rename_array(old, new, preference="cell")
 
+    def set_active(self, active: bool, ind: ArrayLike) -> None:
+        """
+        Set active state to cells.
+
+        Parameters
+        ----------
+        active : bool
+            Active state to set.
+        ind : ArrayLike, optional
+            Indices of cells for which active state will be assigned to.
+    
+        """
+        if "vtkGhostType" not in self.data:
+            self.data["vtkGhostType"] = np.zeros(self.n_cells, dtype=np.uint8)
+
+        self.data["vtkGhostType"][ind] = 0 if active else 32
+
     def set_label_length(self, n: Optional[int] = None) -> None:
         """
         Set label length and regenerate cell label array.
@@ -268,6 +292,23 @@ class BaseMesh(ABC):
 
         self.labels = Labeler(n)(self.n_cells)
         self.metadata["Label Length"] = int(n)
+
+    def set_label(self, label: str, ind: int) -> None:
+        """
+        Set label to cell.
+
+        Parameters
+        ----------
+        Label : str
+            Cell label.
+        ind : ArrayLike, optional
+            Indice of cell for which label will be assigned to.
+    
+        """
+        if len(label) != self.label_length:
+            raise ValueError(f"could not set label of length {len(label)} (expected length {self.label_length})")
+
+        self.metadata["Label"][ind] = label
 
     def set_material(self, material: str, ind: Optional[ArrayLike] = None) -> None:
         """
@@ -625,6 +666,7 @@ class BaseMesh(ABC):
             self.to_meshio().write(filename, file_format=file_format)
 
         else:
+            self.pyvista.user_dict.update(self.metadata)
             self.pyvista.save(filename)
 
     def plot(self, **kwargs) -> None:
@@ -640,7 +682,7 @@ class BaseMesh(ABC):
         if "scalars" not in kwargs:
             kwargs["scalars"] = self.materials
             
-        self.pyvista.plot(**kwargs)
+        self.pyvista.cast_to_unstructured_grid().plot(**kwargs)
 
     def _compute_connection_properties(self) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
         """Compute connection properties."""
@@ -679,11 +721,7 @@ class BaseMesh(ABC):
     @property
     def active(self) -> ArrayLike:
         """Return active cell array."""
-        try:
-            return self.data["vtkGhostType"] == 0
-
-        except KeyError:
-            return np.ones(self.n_cells, dtype=bool)
+        return self._get_property("vtkGhostType", np.zeros(self.n_cells, dtype=np.uint8)) == 0
 
     @property
     def centers(self) -> ArrayLike:
@@ -727,13 +765,13 @@ class BaseMesh(ABC):
     @property
     def labels(self) -> ArrayLike:
         """Return cell labels."""
-        return self._get_property("Labels")
+        return np.array(self.metadata["Label"])
 
     @labels.setter
     def labels(self, value: ArrayLike) -> None:
         """Set cell labels."""
-        self.add_data("Labels", value)
-        self.metadata["Label Length"] = len(max(self.labels, key=len))
+        self.metadata["Label"] = list(value)
+        self.metadata["Label Length"] = len(max(value, key=len))
 
     @property
     def label_length(self) -> int | None:
@@ -784,7 +822,7 @@ class BaseMesh(ABC):
             )
 
         except KeyError:
-            return self.materials_digitized
+            return self.materials_digitized.copy()
 
     @property
     def materials_digitized(self) -> ArrayLike:
@@ -799,7 +837,8 @@ class BaseMesh(ABC):
     @property
     def metadata(self) -> dict:
         """Return mesh metadata."""
-        return self.pyvista.user_dict
+        # return self.pyvista.user_dict
+        return self._metadata
 
     @property
     def ndim(self) -> int:
