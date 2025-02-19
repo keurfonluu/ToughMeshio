@@ -13,6 +13,7 @@ import meshio
 import numpy as np
 import pyvista as pv
 import pvgridder as pvg
+from scipy.spatial import KDTree
 
 from ._typing import GridLike
 
@@ -255,7 +256,7 @@ class BaseMesh(ABC):
             Indices of cells nearest to point(s).
 
         """
-        return self.pyvista.find_closest_cell(points)
+        return KDTree(self.centers).query(points)[1]
 
     near = find_nearest_cell
 
