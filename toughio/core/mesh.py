@@ -4,6 +4,7 @@ from numpy.typing import ArrayLike
 from typing import Literal, Optional
 from typing_extensions import Self
 
+import copy
 import os
 import pathlib
 from abc import ABC, abstractmethod
@@ -79,10 +80,7 @@ class BaseMesh(ABC):
 
         # Cache user_dict in metadata for performance
         # Update user_dict with metadata when saving mesh
-        self._metadata = dict(self.pyvista.user_dict)
-
-        if metadata is not None:
-            self.metadata.update(metadata)
+        self._metadata = copy.deepcopy(metadata) if metadata else dict(self.pyvista.user_dict)
 
         try:
             material_key = self.material_key
@@ -783,7 +781,7 @@ class BaseMesh(ABC):
     @property
     def labels(self) -> ArrayLike:
         """Return cell labels."""
-        return np.array(self.metadata["Label"])
+        return np.asanyarray(self.metadata["Label"])
 
     @labels.setter
     def labels(self, value: ArrayLike) -> None:
@@ -855,7 +853,6 @@ class BaseMesh(ABC):
     @property
     def metadata(self) -> dict:
         """Return mesh metadata."""
-        # return self.pyvista.user_dict
         return self._metadata
 
     @property
@@ -958,8 +955,8 @@ class Mesh(BaseMesh):
             return self.pyvista.get_cell(key)
 
         else:
-            mesh = Mesh(self.pyvista.cast_to_unstructured_grid().extract_cells(key))
-            mesh.metadata.update(self.metadata)
+            mesh = Mesh(self.pyvista.cast_to_unstructured_grid().extract_cells(key), metadata=self.metadata)
+            mesh.labels = self.labels[key]
 
             return mesh
 
