@@ -186,6 +186,27 @@ class BaseMesh(ABC):
             Mesh with extracted materials.
 
         """
+        mask = self.find_cells_by_material(material, invert)
+
+        return self[mask]
+
+    def find_cells_by_material(self, material: int | str | Sequence[int | str], invert: bool = False) -> ArrayLike:
+        """
+        Find cells with given material names or IDS.
+
+        Parameters
+        ----------
+        material : int | str | Sequence[int | str]
+            List of material names or IDs to query.
+        invert : bool, default False
+            If True, invert selection.
+        
+        Returns
+        -------
+        ArrayLike
+            Indices of cells with given materials.
+
+        """
         material = [material] if isinstance(material, (int, str)) else material
 
         try:
@@ -202,10 +223,7 @@ class BaseMesh(ABC):
 
         mask = ~mask if invert else mask
 
-        if not mask.any():
-            raise ValueError("could not extract cells with no matching material")
-
-        return self[mask]
+        return np.flatnonzero(mask)
 
     def find_enclosing_cell(self, points: ArrayLike) -> ArrayLike:
         """
