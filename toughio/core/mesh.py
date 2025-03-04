@@ -127,7 +127,7 @@ class BaseMesh(ABC):
 
         return mesh
 
-    def add_data(self, name: str, data: ArrayLike) -> None:
+    def add_data(self, *args) -> None:
         """
         Add a new data array.
 
@@ -139,7 +139,27 @@ class BaseMesh(ABC):
             Data array.
 
         """
-        self.data[name] = data[:self.n_cells]
+        from .. import ElementOutput
+
+        if len(args) == 1:
+            data, = args
+
+            if isinstance(data, ElementOutput):
+                data = data.data
+
+            if isinstance(data, dict):
+                for k, v in data.items():
+                    self.data[k] = v[:self.n_cells]
+
+            else:
+                raise ValueError(f"could not add data from '{type(data)}'")
+
+        elif len(args) == 2:
+            name, data = args
+            self.data[name] = data[:self.n_cells]
+
+        else:
+            raise ValueError("invalid input data")
 
     add_cell_data = add_data
 
