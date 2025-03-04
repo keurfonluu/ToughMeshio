@@ -244,7 +244,11 @@ class BaseMesh(ABC):
 
         return np.flatnonzero(mask)
 
-    def find_enclosing_cell(self, points: ArrayLike) -> ArrayLike:
+    def find_enclosing_cell(
+        self,
+        points: ArrayLike,
+        material: Optional[int | str | Sequence[int | str]] = None,
+    ) -> ArrayLike:
         """
         Find cell(s) that contains query point(s).
 
@@ -252,16 +256,35 @@ class BaseMesh(ABC):
         ----------
         points : ArrayLike
             Coordinates of point(s) to query.
+        material : int | str | Sequence[int | str], optional
+            List of material names or IDs to query.
         
         Returns
         -------
         ArrayLike
-            Indices of cells containing point(s).
+            Indice(s) of cell(s) containing point(s).
 
         """
-        return self.pyvista.find_containing_cell(points)
+        mesh = (
+            self.extract_cells_by_material(material)
+            if material is not None
+            else self
+        )
 
-    def find_nearest_cell(self, points: ArrayLike) -> ArrayLike:
+        ids = mesh.pyvista.find_containing_cell(points)
+        ids = (
+            np.where(ids >= 0, mesh.data["vtkOriginalCellIds"][ids], -1)
+            if material is not None
+            else ids
+        )
+            
+        return np.int64(ids) if np.ndim(ids) == 0 else ids
+
+    def find_nearest_cell(
+        self,
+        points: ArrayLike,
+        material: Optional[int | str | Sequence[int | str]] = None,
+    ) -> ArrayLike:
         """
         Find cells(s) nearest to query point(s).
 
@@ -269,14 +292,25 @@ class BaseMesh(ABC):
         ----------
         points : ArrayLike
             Coordinates of point(s) to query.
+        material : int | str | Sequence[int | str], optional
+            List of material names or IDs to query.
         
         Returns
         -------
         ArrayLike
-            Indices of cells nearest to point(s).
+            Indice(s) of cell(s) nearest to point(s).
 
         """
-        return KDTree(self.centers).query(points)[1]
+        mesh = (
+            self.extract_cells_by_material(material)
+            if material is not None
+            else self
+        )
+
+        ids = KDTree(mesh.centers).query(points)[1]
+        ids = mesh.data["vtkOriginalCellIds"][ids] if material is not None else ids
+            
+        return ids
 
     near = find_nearest_cell
 
